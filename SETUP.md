@@ -7,6 +7,19 @@ shows you interactive charts for approval, then places bracket orders
 
 ---
 
+## Continuing development from any device (no install needed)
+
+**Project context for Claude — public URL, works from any browser:**
+```
+https://gist.githubusercontent.com/tradermo143/2fc6da2c58cf261d67d8d93e88410595/raw/30b341578c382820aa8ac8bfe0dd01c432af3323/claude.md
+```
+
+1. Open the URL → `Ctrl+A` → `Ctrl+C`
+2. Open Claude (any device) → new chat → paste + describe what you want
+3. Claude has full project context instantly
+
+---
+
 ## Requirements
 - **Python 3.11+** — https://python.org (check "Add Python to PATH" on install)
 - **Git** — https://git-scm.com

@@ -3,6 +3,18 @@
 This file gives Claude complete context to continue development on any machine,
 in any session, without re-explaining anything.
 
+## How to load this context into any Claude session
+
+**Public Gist URL (works from any browser, no login needed):**
+```
+https://gist.githubusercontent.com/tradermo143/2fc6da2c58cf261d67d8d93e88410595/raw/30b341578c382820aa8ac8bfe0dd01c432af3323/claude.md
+```
+
+**Steps on any device:**
+1. Open the URL above → `Ctrl+A` → `Ctrl+C`
+2. Open Claude (app or claude.ai) → new conversation
+3. Paste + describe what you want to do
+
 ---
 
 ## What This Is
