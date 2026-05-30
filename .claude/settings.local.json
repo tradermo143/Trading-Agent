@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip --version)",
+      "Bash(py --version)",
+      "Bash(where python*)",
+      "PowerShell(py --version)",
+      "PowerShell(py -m pip --version)",
+      "PowerShell(Get-ChildItem \"C:\\\\Users\\\\Sheddy\" -Directory -Depth 3 -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'python|conda|miniconda|anaconda|venv|env' } | Select-Object FullName)",
+      "Bash(python -m pip list)"
+    ]
+  }
+}

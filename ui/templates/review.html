@@ -1,0 +1,520 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trading Agent — Review</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+  <style>
+    :root {
+      --bg:      #0d1117;
+      --surface: #161b22;
+      --border:  #30363d;
+      --muted:   #8b949e;
+      --text:    #e6edf3;
+      --green:   #3fb950;
+      --red:     #f85149;
+      --blue:    #388bfd;
+      --gold:    #d29922;
+      --purple:  #d2a8ff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      margin: 0;
+      padding-bottom: 72px;
+    }
+
+    /* ── Header ─────────────────────────────────────────── */
+    .top-bar {
+      position: sticky; top: 0; z-index: 50;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center;
+      padding: 7px 20px; gap: 16px;
+    }
+    .top-bar .brand { font-weight: 700; font-size: 0.9rem; color: #f0f6ff; }
+    .top-bar .meta  { font-size: 0.78rem; color: var(--muted); margin-left: auto; }
+
+    /* ── Progress ───────────────────────────────────────── */
+    .progress-bar-wrap {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 5px 20px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .progress-track {
+      flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden;
+    }
+    .progress-fill { height: 100%; background: var(--blue); border-radius: 2px; transition: width 0.3s; }
+    .progress-label { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
+
+    /* ── Nav buttons ────────────────────────────────────── */
+    .nav-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 7px 20px 0;
+    }
+    .nav-btn {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); padding: 4px 14px; border-radius: 6px;
+      cursor: pointer; font-size: 0.8rem; transition: background 0.15s;
+    }
+    .nav-btn:hover:not(:disabled) { background: var(--border); }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+    /* ── Main card ──────────────────────────────────────── */
+    .review-card {
+      margin: 8px 20px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 14px 18px;
+    }
+
+    /* ── Ticker header ──────────────────────────────────── */
+    .ticker-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+    .ticker-sym { font-size: 1.7rem; font-weight: 800; color: #f0f6ff; letter-spacing: -1px; }
+    .badge-setup        { background: #1a3a6e; color: #79b8ff; font-size: 0.74rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+    .badge-contraction  { background: #3d2a00; color: #e3a21a; font-size: 0.74rem; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+    .decision-tag { margin-left: auto; font-weight: 700; font-size: 0.9rem; }
+
+    /* ── Stats grid ─────────────────────────────────────── */
+    .stats-row {
+      display: flex; flex-wrap: wrap; gap: 0;
+      border: 1px solid var(--border); border-radius: 8px;
+      overflow: hidden; margin-bottom: 10px;
+    }
+    .stat-cell {
+      flex: 1; min-width: 90px;
+      padding: 6px 12px;
+      border-right: 1px solid var(--border);
+    }
+    .stat-cell:last-child { border-right: none; }
+    .stat-label { font-size: 0.63rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+    .stat-val   { font-size: 0.9rem; font-weight: 600; }
+    .c-green  { color: var(--green); }
+    .c-red    { color: var(--red); }
+    .c-purple { color: var(--purple); }
+    .c-gold   { color: var(--gold); }
+
+    /* ── Charts ─────────────────────────────────────────── */
+    .charts-row { display: flex; gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+    .chart-panel {
+      flex: 1; min-width: 300px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .chart-title {
+      padding: 5px 10px 0;
+      font-size: 0.7rem; color: var(--muted);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .chart-placeholder {
+      height: 370px; display: flex;
+      align-items: center; justify-content: center;
+      color: var(--muted); font-size: 0.85rem;
+      flex-direction: column; gap: 8px;
+    }
+    .spinner {
+      width: 24px; height: 24px; border: 3px solid var(--border);
+      border-top-color: var(--blue); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Decision buttons ───────────────────────────────── */
+    .decision-row { display: flex; gap: 10px; justify-content: center; }
+    .btn-dec {
+      padding: 8px 28px; border-radius: 8px; font-size: 0.9rem;
+      font-weight: 600; cursor: pointer; border: none; transition: all 0.15s;
+      min-width: 130px;
+    }
+    .btn-approve   { background: #1a4a27; color: var(--green); border: 1.5px solid var(--green); }
+    .btn-approve:hover   { background: #238636; color: #fff; }
+    .btn-watchlist { background: #1a2f4a; color: var(--blue);  border: 1.5px solid var(--blue); }
+    .btn-watchlist:hover { background: #1d4075; color: #fff; }
+    .btn-skip      { background: transparent; color: var(--muted); border: 1.5px solid var(--border); }
+    .btn-skip:hover      { background: var(--border); color: var(--text); }
+    .btn-dec.active-approve   { background: #238636 !important; color: #fff !important; }
+    .btn-dec.active-watchlist { background: #1d4075 !important; color: #fff !important; }
+    .btn-dec.active-skip      { background: var(--border) !important; color: var(--text) !important; }
+
+    /* ── Summary footer ─────────────────────────────────── */
+    .footer-bar {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 100;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      padding: 8px 20px;
+      display: flex; align-items: center; gap: 20px;
+    }
+    .footer-stat { font-size: 0.85rem; font-weight: 600; }
+    .btn-finish {
+      margin-left: auto;
+      background: #238636; color: #fff; border: none;
+      padding: 7px 18px; border-radius: 7px;
+      font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .btn-finish:hover { background: #2ea043; }
+
+    /* ── Keyboard hint ──────────────────────────────────── */
+    .kbd-hint {
+      font-size: 0.68rem; color: var(--muted);
+      text-align: center; padding: 5px 0 0;
+    }
+    kbd {
+      background: var(--border); color: var(--text);
+      padding: 1px 5px; border-radius: 3px; font-size: 0.68rem;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="top-bar">
+  <span class="brand">⬡ Trading Agent</span>
+  <span id="top-date" style="font-size:0.82rem;color:var(--muted);"></span>
+  <span class="meta">{{ total }} setup(s) · Account {{ account }} · Risk/trade {{ risk_pct }}</span>
+</div>
+
+<!-- Progress bar -->
+<div class="progress-bar-wrap">
+  <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+  <span class="progress-label" id="prog-label">–</span>
+</div>
+
+<!-- Nav row -->
+<div class="nav-row">
+  <button class="nav-btn" id="btn-prev" onclick="navigate(-1)">← Prev</button>
+  <span style="font-size:0.82rem;color:var(--muted);" id="nav-center">Use arrow keys or A / S / W</span>
+  <button class="nav-btn" id="btn-next" onclick="navigate(1)">Next →</button>
+</div>
+
+<!-- Review card -->
+<div class="review-card" id="review-card">
+
+  <!-- Ticker header -->
+  <div class="ticker-row">
+    <div class="ticker-sym"  id="t-symbol">—</div>
+    <div id="t-badges"></div>
+    <div class="decision-tag" id="t-decision"></div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-cell">
+      <div class="stat-label">Entry</div>
+      <div class="stat-val c-green"  id="s-entry">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Stop</div>
+      <div class="stat-val c-red"    id="s-stop">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">R / share</div>
+      <div class="stat-val c-purple" id="s-r">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Zone</div>
+      <div class="stat-val"          id="s-zone">—</div>
+    </div>
+    <div class="stat-cell" style="border-left:2px solid var(--border)">
+      <div class="stat-label">Shares</div>
+      <div class="stat-val"          id="s-shares">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Position $</div>
+      <div class="stat-val"          id="s-pos">—</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-label">Risk $</div>
+      <div class="stat-val c-red"    id="s-risk">—</div>
+    </div>
+    <div class="stat-cell" style="border-left:2px solid var(--border)">
+      <div class="stat-label">1R / 2R / 3R targets</div>
+      <div class="stat-val c-gold"   id="s-targets">—</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-row">
+    <div class="chart-panel">
+      <div class="chart-title">Daily  ·  SMA 20 / 50 / 200</div>
+      <div id="chart-daily">
+        <div class="chart-placeholder"><div class="spinner"></div><span>Loading…</span></div>
+      </div>
+    </div>
+    <div class="chart-panel">
+      <div class="chart-title">Weekly  ·  SMA 20w / 50w / 200w</div>
+      <div id="chart-weekly">
+        <div class="chart-placeholder"><div class="spinner"></div><span>Loading…</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Decision buttons -->
+  <div class="decision-row" id="dec-btns">
+    <button class="btn-dec btn-approve"   id="btn-approve"   onclick="decide('approve')">✓  Approve</button>
+    <button class="btn-dec btn-watchlist" id="btn-watchlist" onclick="decide('watchlist')">⊙  Watchlist</button>
+    <button class="btn-dec btn-skip"      id="btn-skip"      onclick="decide('skip')">✗  Skip</button>
+  </div>
+
+  <div class="kbd-hint">
+    Keyboard: <kbd>A</kbd> approve &nbsp; <kbd>S</kbd> skip &nbsp; <kbd>W</kbd> watchlist &nbsp;
+    <kbd>←</kbd><kbd>→</kbd> navigate
+  </div>
+
+</div><!-- /review-card -->
+
+<!-- No setups message -->
+<div id="no-setups" style="display:none; text-align:center; padding:60px 24px; color:var(--muted);">
+  <div style="font-size:2rem;margin-bottom:12px;">📋</div>
+  <div style="font-size:1.1rem;">No setups found today.</div>
+  <div style="font-size:0.85rem;margin-top:8px;">Run the scanner again after market close.</div>
+</div>
+
+<!-- Summary footer -->
+<div class="footer-bar">
+  <span class="footer-stat" style="color:var(--green);">✓ <span id="cnt-approve">0</span> approved</span>
+  <span class="footer-stat" style="color:var(--blue);">⊙ <span id="cnt-watchlist">0</span> watchlist</span>
+  <span class="footer-stat" style="color:var(--muted);">✗ <span id="cnt-skip">0</span> skipped</span>
+  <span style="font-size:0.8rem;color:var(--muted);" id="remaining-count"></span>
+  <button class="btn-finish" onclick="finishReview()">Finish Review →</button>
+</div>
+
+<script>
+const SETUPS = {{ setups_json|safe }};
+let current   = 0;
+const decisions = {};
+const chartCache = {};  // {ticker: {daily, weekly}}
+
+document.getElementById('top-date').textContent =
+  new Date().toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric', year:'numeric'});
+
+function fmt2(n)   { return (+n).toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
+function fmtDollar(n) { return '$' + (+n).toLocaleString('en-US', {maximumFractionDigits:0}); }
+
+function updateFooter(counts) {
+  document.getElementById('cnt-approve').textContent   = counts.approve    || 0;
+  document.getElementById('cnt-watchlist').textContent = counts.watchlist  || 0;
+  document.getElementById('cnt-skip').textContent      = counts.skip       || 0;
+  const decided  = (counts.approve||0) + (counts.skip||0) + (counts.watchlist||0);
+  const remaining = SETUPS.length - decided;
+  document.getElementById('remaining-count').textContent =
+    remaining > 0 ? `${remaining} remaining` : 'All reviewed';
+}
+
+async function showTicker(idx) {
+  if (!SETUPS.length) {
+    document.getElementById('review-card').style.display = 'none';
+    document.getElementById('no-setups').style.display   = 'block';
+    document.querySelector('.progress-bar-wrap').style.display = 'none';
+    return;
+  }
+
+  current = idx;
+  const s = SETUPS[idx];
+
+  // Progress
+  const pct = ((idx + 1) / SETUPS.length * 100).toFixed(0);
+  document.getElementById('prog-fill').style.width  = pct + '%';
+  document.getElementById('prog-label').textContent = `${idx + 1} of ${SETUPS.length}`;
+  document.getElementById('btn-prev').disabled = idx === 0;
+  document.getElementById('btn-next').disabled = idx === SETUPS.length - 1;
+
+  // Header
+  document.getElementById('t-symbol').textContent = s.ticker;
+  document.getElementById('t-badges').innerHTML = s.scans.map(sc =>
+    `<span class="badge-${sc.toLowerCase()}">${sc}</span>`
+  ).join(' ');
+
+  // Stats
+  document.getElementById('s-entry').textContent   = `$${fmt2(s.zone.entry_price)}`;
+  document.getElementById('s-stop').textContent    = `$${fmt2(s.zone.stop_price)}`;
+  document.getElementById('s-r').textContent       = `$${fmt2(s.zone.r_value)}`;
+  document.getElementById('s-zone').textContent    = `${s.zone.zone_length} bar(s)`;
+  document.getElementById('s-shares').textContent  = (+s.sizing.shares).toLocaleString();
+  document.getElementById('s-pos').textContent     = fmtDollar(s.sizing.position_value);
+  document.getElementById('s-risk').textContent    = `$${fmt2(s.sizing.risk_dollars)} (${s.sizing.risk_pct_actual}%)`;
+  const tgts = Object.entries(s.sizing.targets).map(([k,v]) => `$${fmt2(v)}`).join(' / ');
+  document.getElementById('s-targets').textContent = tgts;
+
+  // Decision indicator & button highlights
+  refreshDecisionUI(s.ticker);
+
+  // Charts — use cache if available
+  if (chartCache[s.ticker]) {
+    renderCharts(chartCache[s.ticker]);
+  } else {
+    document.getElementById('chart-daily').innerHTML  =
+      '<div class="chart-placeholder"><div class="spinner"></div><span>Loading…</span></div>';
+    document.getElementById('chart-weekly').innerHTML =
+      '<div class="chart-placeholder"><div class="spinner"></div><span>Loading…</span></div>';
+
+    const [dr, wr] = await Promise.all([
+      fetch(`/api/chart/daily/${s.ticker}`).then(r => r.json()),
+      fetch(`/api/chart/weekly/${s.ticker}`).then(r => r.json()),
+    ]);
+    chartCache[s.ticker] = {daily: dr, weekly: wr};
+    renderCharts(chartCache[s.ticker]);
+  }
+
+  // Prefetch next ticker's charts in background
+  const next = SETUPS[idx + 1];
+  if (next && !chartCache[next.ticker]) {
+    Promise.all([
+      fetch(`/api/chart/daily/${next.ticker}`).then(r => r.json()),
+      fetch(`/api/chart/weekly/${next.ticker}`).then(r => r.json()),
+    ]).then(([dr, wr]) => { chartCache[next.ticker] = {daily: dr, weekly: wr}; });
+  }
+}
+
+function renderCharts({daily, weekly}) {
+  const cfg = {responsive: true, displayModeBar: false};
+  // Clear innerHTML first — otherwise the loading spinner persists below the chart
+  document.getElementById('chart-daily').innerHTML  = '';
+  document.getElementById('chart-weekly').innerHTML = '';
+  Plotly.react('chart-daily',  daily.data,  daily.layout,  cfg);
+  Plotly.react('chart-weekly', weekly.data, weekly.layout, cfg);
+}
+
+function refreshDecisionUI(ticker) {
+  const dec = decisions[ticker];
+  const decEl = document.getElementById('t-decision');
+  ['approve','watchlist','skip'].forEach(d => {
+    document.getElementById('btn-' + d).classList.toggle('active-' + d, dec === d);
+  });
+  if      (dec === 'approve')   decEl.innerHTML = '<span style="color:var(--green);">✓ Approved</span>';
+  else if (dec === 'watchlist') decEl.innerHTML = '<span style="color:var(--blue);">⊙ Watchlist</span>';
+  else if (dec === 'skip')      decEl.innerHTML = '<span style="color:var(--muted);">✗ Skipped</span>';
+  else                          decEl.innerHTML = '';
+}
+
+function navigate(dir) {
+  const next = current + dir;
+  if (next >= 0 && next < SETUPS.length) showTicker(next);
+}
+
+async function decide(decision) {
+  if (!SETUPS.length) return;
+  const ticker = SETUPS[current].ticker;
+
+  // Toggle off if clicking same decision again
+  if (decisions[ticker] === decision) {
+    delete decisions[ticker];
+    refreshDecisionUI(ticker);
+    const counts = {
+      approve:   Object.values(decisions).filter(v=>v==='approve').length,
+      watchlist: Object.values(decisions).filter(v=>v==='watchlist').length,
+      skip:      Object.values(decisions).filter(v=>v==='skip').length,
+    };
+    updateFooter(counts);
+    return;
+  }
+
+  decisions[ticker] = decision;
+  refreshDecisionUI(ticker);
+
+  const resp = await fetch('/api/decide', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ticker, decision}),
+  });
+  const counts = await resp.json();
+  updateFooter(counts);
+
+  // Auto-advance after a short pause
+  if (current < SETUPS.length - 1) {
+    setTimeout(() => navigate(1), 450);
+  }
+}
+
+async function finishReview() {
+  const resp    = await fetch('/api/finish', {method: 'POST'});
+  const summary = await resp.json();
+
+  const approved   = summary.approved   || [];
+  const watchlist  = summary.watchlist  || [];
+  const skipped    = summary.skipped    || [];
+  const noDecision = (summary.total_shown || 0)
+    - (approved.length + watchlist.length + skipped.length);
+
+  // ── Build summary message ──────────────────────────────────────────
+  let msg = `── Review Complete ──────────────────\n\n`;
+
+  if (approved.length) {
+    msg += `✓ APPROVED (${approved.length})\n`;
+    approved.forEach(s => {
+      msg += `  ${s.ticker.padEnd(6)}  ${s.shares} shares`
+           + `  Entry $${fmt2(s.entry)}`
+           + `  Stop $${fmt2(s.stop)}`
+           + `  R $${fmt2(s.r)}\n`;
+    });
+    msg += '\n';
+  }
+  if (watchlist.length) {
+    msg += `⊙ WATCHLIST (${watchlist.length}): ${watchlist.join(', ')}\n\n`;
+  }
+  if (skipped.length) {
+    msg += `✗ SKIPPED (${skipped.length}): ${skipped.join(', ')}\n\n`;
+  }
+  if (noDecision > 0) {
+    msg += `⟳ Not reviewed: ${noDecision} ticker(s)\n\n`;
+  }
+  msg += `History log: ${summary.history_file || 'logs/scan_history.csv'}\n`;
+
+  if (!approved.length) {
+    alert(msg + '\nNo tickers approved — no orders to place.');
+    return;
+  }
+
+  // ── Confirm before placing orders ─────────────────────────────────
+  const confirm = window.confirm(
+    msg + `\nPlace ${approved.length} bracket order(s) on IBKR paper account now?`
+  );
+  if (!confirm) return;
+
+  // ── Place orders ───────────────────────────────────────────────────
+  const orderResp = await fetch('/api/place_orders', {method: 'POST'});
+  const orders    = await orderResp.json();
+
+  let resultMsg = `── Orders Submitted ─────────────────\n\n`;
+  (orders.placed || []).forEach(o => {
+    resultMsg += `✓ ${o.ticker.padEnd(6)}  ${o.shares} shares`
+               + `  Entry $${fmt2(o.entry)}  Stop $${fmt2(o.stop)}\n`
+               + `   Entry order #${o.entry_order_id}  Stop order #${o.stop_order_id}\n`;
+  });
+  if ((orders.failed || []).length) {
+    resultMsg += `\n✗ Failed:\n`;
+    orders.failed.forEach(f => { resultMsg += `  ${f.ticker}: ${f.message}\n`; });
+  }
+  resultMsg += '\nCheck your IBKR paper account to confirm orders are live.';
+  alert(resultMsg);
+}
+
+// ── Keyboard shortcuts ────────────────────────────────
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  switch(e.key) {
+    case 'ArrowRight': case 'n': navigate(1);              break;
+    case 'ArrowLeft':  case 'p': navigate(-1);             break;
+    case 'a': case 'A':          decide('approve');        break;
+    case 's': case 'S':          decide('skip');           break;
+    case 'w': case 'W':          decide('watchlist');      break;
+  }
+});
+
+// ── Init ──────────────────────────────────────────────
+showTicker(0);
+updateFooter({approve:0, watchlist:0, skip:0});
+</script>
+</body>
+</html>
