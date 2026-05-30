@@ -23,7 +23,7 @@ echo  [1/2] Starting Trading Agent app...
 start "Trading Agent" cmd /k "cd /d %~dp0 && python ui/app.py"
 
 :: Wait for app to be ready
-timeout /t 6 /nobreak >nul
+timeout /t 3 /nobreak >nul
 
 :: Start ngrok in its own window
 echo  [2/2] Starting ngrok tunnel...

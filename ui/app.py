@@ -75,20 +75,29 @@ def _global_auth():
 _setups    = []    # list of JSON-serialisable setup dicts
 _dfs       = {}    # {ticker: enriched DataFrame} — not serialised
 _decisions = {}    # {ticker: 'approve'|'skip'|'watchlist'}
+_status    = {'ready': False, 'message': 'Starting up…', 'error': None}
 
 
 def _load():
-    """Run scans and populate _setups / _dfs."""
+    """Run scans and populate _setups / _dfs. Runs in a background thread."""
     global _setups
 
-    logger.info("Fetching universe…")
-    tickers = fetch_universe(cache_dir=CONFIG.data.universe_cache_dir)
+    try:
+        _status['message'] = 'Fetching universe…'
+        logger.info("Fetching universe…")
+        tickers = fetch_universe(cache_dir=CONFIG.data.universe_cache_dir)
 
-    logger.info("Updating data cache…")
-    data = update_cache(tickers, CONFIG.data.cache_dir, CONFIG.data.full_history_days)
+        _status['message'] = 'Updating data cache…'
+        logger.info("Updating data cache…")
+        data = update_cache(tickers, CONFIG.data.cache_dir, CONFIG.data.full_history_days)
 
-    logger.info("Running scans…")
-    results = run_scans(data)
+        _status['message'] = 'Running scans…'
+        logger.info("Running scans…")
+        results = run_scans(data)
+    except Exception as e:
+        _status['error'] = str(e)
+        logger.error(f"Load failed: {e}")
+        return
 
     hits: dict = {}
     for t in results['scan1']:
@@ -122,6 +131,8 @@ def _load():
         })
 
     _setups = sorted(setups, key=lambda x: x['ticker'])
+    _status['ready']   = True
+    _status['message'] = f"{len(_setups)} setup(s) ready for review"
     logger.info(f"UI ready — {len(_setups)} setup(s) to review")
 
 
@@ -129,6 +140,8 @@ def _load():
 
 @app.route('/')
 def index():
+    if not _status['ready']:
+        return render_template('loading.html', status=_status)
     return render_template(
         'review.html',
         setups_json=json.dumps(_setups),
@@ -136,6 +149,11 @@ def index():
         account=f"${CONFIG.risk.account_value:,.0f}",
         risk_pct=f"{CONFIG.risk.risk_per_trade_pct * 100:.1f}%",
     )
+
+
+@app.route('/api/status')
+def api_status():
+    return jsonify(_status)
 
 
 @app.route('/api/chart/daily/<ticker>')
@@ -329,17 +347,18 @@ def api_approved():
 # ── Entry point ───────────────────────────────────────────────────────────────
 
 def run():
-    _load()   # scans run synchronously — cache is warm so this takes ~30s
+    # Start scan in background — Flask comes up immediately
+    threading.Thread(target=_load, daemon=True).start()
 
     def _open_browser():
         import time
         time.sleep(1.5)
         webbrowser.open(f"http://{CONFIG.ui.host}:{CONFIG.ui.port}")
-
     threading.Thread(target=_open_browser, daemon=True).start()
 
     print(f"\n  ┌─ Trading Agent — Approval UI ──────────────────────┐")
     print(f"  │  Open: http://{CONFIG.ui.host}:{CONFIG.ui.port}              │")
+    print(f"  │  Scans running in background — loading page shown   │")
     print(f"  │  Press Ctrl+C to stop.                              │")
     print(f"  └────────────────────────────────────────────────────┘\n")
 
