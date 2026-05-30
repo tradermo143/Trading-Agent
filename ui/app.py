@@ -14,7 +14,8 @@ from datetime import date
 from pathlib import Path
 
 import pandas as pd
-from flask import Flask, jsonify, render_template, request
+from flask import Flask, jsonify, render_template, request, Response
+from functools import wraps
 
 from config import CONFIG
 from data.universe import fetch_universe
@@ -34,6 +35,41 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# ── Optional password protection (set UI_PASSWORD in .env) ───────────────────
+def _check_password(password: str) -> bool:
+    ui_pw = os.getenv('UI_PASSWORD', '')
+    return not ui_pw or password == ui_pw          # no password set = open
+
+def _require_auth(f):
+    """Wrap a route with HTTP Basic Auth when UI_PASSWORD is set in .env."""
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        if not os.getenv('UI_PASSWORD', ''):
+            return f(*args, **kwargs)              # local mode — skip auth
+        auth = request.authorization
+        if not auth or not _check_password(auth.password):
+            return Response(
+                'Login required.',
+                401,
+                {'WWW-Authenticate': 'Basic realm="Trading Agent"'},
+            )
+        return f(*args, **kwargs)
+    return decorated
+
+# Apply auth to every route automatically
+@app.before_request
+def _global_auth():
+    ui_pw = os.getenv('UI_PASSWORD', '')
+    if not ui_pw:
+        return                                     # no password set — allow all
+    auth = request.authorization
+    if not auth or not _check_password(auth.password):
+        return Response(
+            'Login required.',
+            401,
+            {'WWW-Authenticate': 'Basic realm="Trading Agent"'},
+        )
 
 # ── Session state (populated once on startup) ─────────────────────────────────
 _setups    = []    # list of JSON-serialisable setup dicts
