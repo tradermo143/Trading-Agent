@@ -354,6 +354,8 @@ async function showTicker(idx) {
   if (chartCache[s.ticker]) {
     renderCharts(chartCache[s.ticker]);
   } else {
+    Plotly.purge('chart-daily');
+    Plotly.purge('chart-weekly');
     document.getElementById('chart-daily').innerHTML  =
       '<div class="chart-placeholder"><div class="spinner"></div><span>Loading…</span></div>';
     document.getElementById('chart-weekly').innerHTML =
@@ -379,11 +381,14 @@ async function showTicker(idx) {
 
 function renderCharts({daily, weekly}) {
   const cfg = {responsive: true, displayModeBar: false};
-  // Clear innerHTML first — otherwise the loading spinner persists below the chart
-  document.getElementById('chart-daily').innerHTML  = '';
-  document.getElementById('chart-weekly').innerHTML = '';
-  Plotly.react('chart-daily',  daily.data,  daily.layout,  cfg);
-  Plotly.react('chart-weekly', weekly.data, weekly.layout, cfg);
+  // Purge existing Plotly instances fully before re-rendering.
+  // Simply clearing innerHTML removes the SVG but leaves Plotly's internal
+  // state on the div element — Plotly.react() then tries to update a
+  // non-existent plot and renders nothing. Purge cleans everything up first.
+  Plotly.purge('chart-daily');
+  Plotly.purge('chart-weekly');
+  Plotly.newPlot('chart-daily',  daily.data,  daily.layout,  cfg);
+  Plotly.newPlot('chart-weekly', weekly.data, weekly.layout, cfg);
 }
 
 function refreshDecisionUI(ticker) {
