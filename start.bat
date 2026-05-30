@@ -1,5 +1,5 @@
 @echo off
-title Trading Agent — Launcher
+title Trading Agent Launcher
 cd /d "%~dp0"
 
 echo.
@@ -8,25 +8,12 @@ echo    Trading Agent  --  Starting up
 echo  ================================================
 echo.
 
-:: Full path to ngrok — avoids any PATH issues
+:: Full path to ngrok
 set "NGROK=C:\Users\Sheddy\AppData\Local\Microsoft\WinGet\Packages\Ngrok.Ngrok_Microsoft.Winget.Source_8wekyb3d8bbwe\ngrok.exe"
 
-:: Verify ngrok exists at that path
+:: Verify ngrok exists
 if not exist "%NGROK%" (
-    echo  ERROR: ngrok not found at expected location.
-    echo  Please reinstall from https://ngrok.com/download
-    echo.
-    pause
-    exit /b 1
-)
-
-:: Verify ngrok has an authtoken configured
-"%NGROK%" config check >nul 2>&1
-if errorlevel 1 (
-    echo  ERROR: ngrok authtoken not set.
-    echo  Run this in PowerShell:  ngrok config add-authtoken YOUR_TOKEN
-    echo  Get your token at: https://dashboard.ngrok.com/auth/your-authtoken
-    echo.
+    echo  ERROR: ngrok not found. Please reinstall from https://ngrok.com/download
     pause
     exit /b 1
 )
@@ -38,22 +25,19 @@ start "Trading Agent" cmd /k "cd /d %~dp0 && python ui/app.py"
 :: Wait for app to be ready
 timeout /t 6 /nobreak >nul
 
-:: Start ngrok in its own window — the URL will appear there
+:: Start ngrok in its own window
 echo  [2/2] Starting ngrok tunnel...
-echo.
-echo  A new window will open showing your public URL.
-echo  It looks like:  https://abc123.ngrok-free.app
-echo  Open that URL from any browser, on any device.
-echo.
-start "ngrok — Trading Agent" "%NGROK%" http 5000
+start "ngrok" "%NGROK%" http 5000
 
-echo  Both windows are now running.
-echo  Check the ngrok window for your public URL.
 echo.
-echo  Press any key to shut everything down when done.
+echo  Done! Check the ngrok window for your public URL.
+echo  It looks like:  https://abc123.ngrok-free.app
+echo.
+echo  Open that URL from any browser on any device.
+echo  Leave username blank, enter your UI_PASSWORD.
+echo.
+echo  Press any key here to shut everything down.
 pause >nul
 
-:: Shut down both windows
 taskkill /FI "WINDOWTITLE eq Trading Agent" /F >nul 2>&1
-taskkill /FI "WINDOWTITLE eq ngrok — Trading Agent" /F >nul 2>&1
-echo  Shut down complete.
+taskkill /FI "WINDOWTITLE eq ngrok" /F >nul 2>&1
